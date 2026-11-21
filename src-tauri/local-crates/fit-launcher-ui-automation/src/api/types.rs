@@ -391,7 +391,9 @@ impl InstallationJob {
 
         #[cfg(not(target_os = "windows"))]
         {
-            Ok(())
+            tokio::fs::remove_dir_all(&self.path)
+                .await
+                .map_err(|e| InstallationError::IOError(e.to_string()))
         }
     }
 }

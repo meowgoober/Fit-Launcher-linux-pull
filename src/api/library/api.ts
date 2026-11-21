@@ -5,6 +5,7 @@ import {
   Game,
   GameCollection,
   InstallationInfo,
+  LaunchRunner,
   Result,
 } from "../../bindings";
 
@@ -66,8 +67,15 @@ export class LibraryApi {
     return await commands.removeCollection(collectionName);
   }
 
-  async runExecutable(path: string): Promise<void> {
-    return await commands.startExecutable(path);
+  async getLinuxLaunchRunners(): Promise<LaunchRunner[]> {
+    return await commands.getLinuxLaunchRunners();
+  }
+
+  async runExecutable(
+    path: string,
+    runner: LaunchRunner | null = null
+  ): Promise<Result<null, string>> {
+    return await commands.startExecutable(path, runner);
   }
 
   async getExecutableInfo(

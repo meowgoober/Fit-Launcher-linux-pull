@@ -96,3 +96,16 @@ pub fn is_running_as_admin() -> bool {
     }
     .unwrap_or_default()
 }
+
+#[cfg(not(target_os = "windows"))]
+pub fn is_running_as_admin() -> bool {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status
+                .lines()
+                .find(|line| line.starts_with("Uid:"))
+                .and_then(|line| line.split_whitespace().nth(1).map(|uid| uid == "0"))
+        })
+        .unwrap_or(false)
+}

@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use specta::Type;
 use std::sync::LazyLock;
 use tracing::{error, info, warn};
 use uuid::Uuid;
@@ -14,6 +13,7 @@ use crate::controller_client::{
     ControllerClient, ControllerCommand, ControllerEvent, InstallOptions, find_controller_binary,
     generate_pipe_name,
 };
+pub use crate::mighty_commands::QueueStatus;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -27,13 +27,6 @@ pub struct QueuedInstallJob {
     pub setup_path: PathBuf,
     pub install_path: String,
     pub options: InstallOptions,
-}
-
-// For UI
-#[derive(serde::Serialize, Type)]
-pub struct QueueStatus {
-    pub queue: Vec<String>,
-    pub active: Option<String>,
 }
 
 #[derive(Default)]

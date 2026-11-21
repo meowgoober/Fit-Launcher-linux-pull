@@ -9,8 +9,7 @@ import createDownloadPopup from "../../../Pop-Ups/Download-PopUp/Download-PopUp"
 import { MetadataRow } from "./MetadataRow";
 import { GameDetails } from "../../../types/game";
 import createBasicChoicePopup from "../../../Pop-Ups/Basic-Choice-PopUp/Basic-Choice-PopUp";
-import { LibraryApi } from "../../../api/library/api";
-import { showError } from "../../../helpers/error";
+import { isRunningOnLinux, launchExecutableWithLinuxSupport } from "../../../helpers/linux-launch";
 import { InfoContainer } from "../components/InfoContainer";
 
 
@@ -22,7 +21,6 @@ export type SidebarSectionProps = {
 
 export const SidebarSection = (props: SidebarSectionProps) => {
     const navigate = useNavigate();
-    const api = new LibraryApi();
 
     const handleDownloadPopup = (downloadType: DownloadType) => {
         const g = props.game();
@@ -41,15 +39,16 @@ export const SidebarSection = (props: SidebarSectionProps) => {
     };
 
     const handleStartGame = (path: string) => {
+        if (isRunningOnLinux()) {
+            void launchExecutableWithLinuxSupport(path);
+            return;
+        }
+
         createBasicChoicePopup({
             infoTitle: "Launch Game",
             infoMessage: "Do you want to launch the game now?",
             action: async () => {
-                try {
-                    await api.runExecutable(path);
-                } catch (err) {
-                    await showError(err, "Error");
-                }
+                await launchExecutableWithLinuxSupport(path);
             },
         });
     };

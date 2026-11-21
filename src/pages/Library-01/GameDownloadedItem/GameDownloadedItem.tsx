@@ -10,6 +10,7 @@ import Button from "../../../components/UI/Button/Button";
 import createPathInputPopup from "../../../Pop-Ups/Basic-PathInput-PopUp/Basic-PathInput-PopUp";
 import createAddToCollectionPopup from "../../../Pop-Ups/Basic-AddToCollection-PopUp/Basic-AddToCollection-PopUp";
 import { formatDate, formatDiskSize, formatPlayTime } from "../../../helpers/format";
+import { isRunningOnLinux, launchExecutableWithLinuxSupport } from "../../../helpers/linux-launch";
 import { useNavigate } from "@solidjs/router";
 
 const api = new LibraryApi();
@@ -73,15 +74,16 @@ export default function GameDownloadedItem(props: {
   };
 
   const handleStartGame = (path: string) => {
+    if (isRunningOnLinux()) {
+      void launchExecutableWithLinuxSupport(path);
+      return;
+    }
+
     createBasicChoicePopup({
       infoTitle: "Launch Game",
       infoMessage: "Do you want to launch the game now?",
       action: async () => {
-        try {
-          await api.runExecutable(path);
-        } catch (err) {
-          await showError(err, "Error");
-        }
+        await launchExecutableWithLinuxSupport(path);
       },
     });
   };

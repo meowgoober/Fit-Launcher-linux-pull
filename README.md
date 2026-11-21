@@ -1,11 +1,13 @@
 # Fit Launcher
 
-Fit Launcher is a 🚀 **blazingly fast** 🚀 (sorry it's made in rust, I have to write that) game launcher designed specifically for cracked games from FitGirl Repack. Built with Rust, Tauri, and SolidJS, this launcher delivers the best performance and a sleek, modern design. 
+Fit Launcher is a 🚀 **blazingly fast** 🚀 (sorry it's made in rust, I have to write that) game launcher designed specifically for cracked games from FitGirl Repack. Built with Rust, Tauri, and SolidJS, this launcher delivers the best performance and a sleek, modern design.
 
 ## Features
 - **Lightning Fast**: Powered by Rust and Tauri for better speed and efficiency.
-- **Easy to Use**: Simple setup and easy to run, just execute the launcher and you're good to go!
-- **Quick Download**: Using **aria2c** for torrenting and DDL for optimal speed.
+- **Cross-Platform**: Works on **Windows** and **Linux**.
+- **Easy to Use**: Simple setup and easy to run.
+- **Quick Download**: Uses **aria2c** for torrenting and DDL for optimal speed.
+- **Wine/Proton Launch Support (Linux)**: When running on Linux, Fit Launcher detects installed Wine/Proton runners and asks which one to use when launching a game.
 
 ## Getting Started
 
@@ -27,21 +29,31 @@ Fit Launcher is a 🚀 **blazingly fast** 🚀 (sorry it's made in rust, I have 
 1. **Visit the Release Page**  
    Go to the [release page here](https://github.com/CarrotRub/Fit-Launcher/releases/latest).
 
-2. **Download the Executable**  
-   Scroll down until you find the executable, which will look like this `Fit.Launcher_3.X.X_x64_en-US.msi`
+2. **Download the correct package for your OS**
+   - **Windows:** `.msi` or `.exe` installer (e.g. `Fit.Launcher_<version>_x64_en-US.msi`)
+   - **Linux:** `.AppImage`, `.deb`, or `.rpm` package (depending on your distro)
 
-3. **Run it !**
-   Once downloaded, simply execute the setup and install it inside
-   `C:/Program Files/` then run the executable :) !
+3. **Install and run**
+   - **Windows:** run the installer and launch Fit Launcher.
+   - **Linux (AppImage):** make it executable and run it:
+     ```bash
+     chmod +x Fit.Launcher_*.AppImage
+     ./Fit.Launcher_*.AppImage
+     ```
+   - **Linux (.deb/.rpm):** install with your package manager and launch Fit Launcher from your app menu or terminal.
+
+### Linux runtime notes
+- **Downloads:** `aria2c` must be installed and available in `PATH` (Linux builds do not bundle the Windows sidecar binaries).
+- **Running FitGirl games/installers:** you need **Wine** and/or **Proton** installed. On Linux, Fit Launcher detects available runners and asks which one to use when launching a game.
+- **Feature parity:** some Windows-specific features (e.g. automated installer UI automation / Windows Defender folder exclusion integration) may be unavailable or limited on Linux.
 
 ### Development Mode
 
 If you want to run the launcher in development mode, follow these steps:
 
-1. Ensure you have any **C++ Compiler**, **Rust**, and **Cargo** installed on your system.
-2. Ensure you have these extensions on VSCode **C/C++ Microsoft** or **CodeLLDB** and **rust-analyzer**.
-3. Clone this repository.
-4. Run the dev command:
+1. Ensure you have **Rust/Cargo**, **Node.js/npm**, and the required Tauri system dependencies for your OS installed.
+2. Clone this repository.
+3. Install frontend dependencies and start the app:
 
 ```bash
 npm install
@@ -50,17 +62,16 @@ npm run tauri dev
 
 ### Building from Source on Windows
 
-If you'd like to build Fit Launcher yourself, follow these steps:
+If you'd like to build Fit Launcher yourself on Windows, follow these steps:
 
-1. Ensure you have any **C++ Compiler**, **Rust**, and **Cargo** installed on your system.
-2. Ensure you have these extensions on VSCode **C/C++ Microsoft** or **CodeLLDB** and **rust-analyzer**.
-3. Clone this repository.
-4. Download and extract [aria2c.exe](https://github.com/mokurin000/aria2c-windows-hide-console/releases/) to `src-tauri/binaries/aria2c-x86_64-pc-windows-msvc.exe`.
-5. Run this to build the binary:
+1. Ensure you have a **C++ compiler**, **Rust/Cargo**, and **Node.js/npm** installed.
+2. Clone this repository.
+3. Download and extract [aria2c.exe](https://github.com/mokurin000/aria2c-windows-hide-console/releases/) to `src-tauri/binaries/aria2c-x86_64-pc-windows-msvc.exe`.
+4. Build the Windows automation sidecar binary:
 ```pwsh
 cd src-tauri; cargo build --release -p fit-launcher-automation 2>&1 | Select-Object -Last 5; Copy-Item -Force "target\release\FitLauncherService.exe" "binaries\FitLauncherService-x86_64-pc-windows-msvc.exe"
 ```
-6. Run the build command:
+5. Build the app:
 
 ```bash
 npm run tauri build
@@ -68,13 +79,9 @@ npm run tauri build
 
 ### Building on Linux
 
-This project provides a unified setup script for Debian/Ubuntu and Fedora.
+Linux builds use `src-tauri/tauri.linux.conf.json` (merged on Linux) which disables bundled Windows sidecar binaries. Install system dependencies, `aria2c`, and at least one Wine/Proton runner for launching games.
 
----
-
-#### **Ubuntu / Debian / Fedora / Arch**
-
-If you're on a Debian-based distro (Ubuntu, Pop!\_OS, Linux Mint, etc...), Fedora or Arch-based:
+#### Option 1: Use the setup script (Debian/Ubuntu, Fedora, Arch)
 
 ```bash
 chmod +x install_deps.sh
@@ -82,43 +89,17 @@ chmod +x install_deps.sh
 npm run tauri dev
 ```
 
-This works for both fish and bash !
+#### Option 2: Manual setup
 
-#### Manual setup
-
-[tauri documentation]: https://v2.tauri.app/start/prerequisites/#linux
-
-You could go to [tauri documentation] for tauri dependencies,
-
-Then install rustup:
-
-```bash
-# For general distributions
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-You may also need llvm-libs and lld for rustc.
-
-Optionally setup fast node manager:
-
-```bash
-curl -fsSL https://fnm.vercel.app/install | bash
-export PATH="$HOME/.local/share/fnm:$HOME/.fnm:$PATH"
-eval "$(fnm env)"
-fnm install --lts
-fnm default --lts
-```
-
-Install node.js dependencies:
+1. Install [Tauri v2 Linux prerequisites](https://v2.tauri.app/start/prerequisites/#linux) for your distro.
+2. Install **Rust/Cargo** and **Node.js/npm**.
+3. Install runtime tools (recommended): `aria2c` and `wine` (and/or Steam/Proton).
+4. Install dependencies and run/build:
 
 ```bash
 npm install
-```
-
-Build the project:
-
-```bash
-npm run tauri dev # development mode
+npm run tauri dev     # development mode
+npm run tauri build   # production build (.AppImage/.deb/.rpm depending on your environment)
 ```
 
 ## Create your own themes !
@@ -156,6 +137,6 @@ Enjoy your games with Fit Launcher!
 
 ## TODO List 
 
-- **Better Cross-Platform Compatibility**: Improve compatibility across different operating systems.
+- **Improve Linux Feature Parity**: Continue improving Linux support (installer automation flows, parity with Windows-specific integrations).
 - **Filtering by Genres and Sizes**: Implement filters to sort games by genres and file sizes.
 - **Control CPU Usage**: Allow the user to limit the CPU usage of the setup.

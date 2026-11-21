@@ -673,13 +673,24 @@ async setCapacity(newCapacity: number) : Promise<Result<null, CacheError>> {
 }
 },
 /**
- * Start an executable using tauri::command
- * 
- * Uses ShellExecuteW to delegate to the Windows shell, which handles UAC
- * elevation automatically if the executable requires it.
+ * Returns detected Wine/Proton runners on Linux. Empty on other platforms.
  */
-async startExecutable(path: string) : Promise<void> {
-    await TAURI_INVOKE("start_executable", { path });
+async getLinuxLaunchRunners() : Promise<LaunchRunner[]> {
+    return await TAURI_INVOKE("get_linux_launch_runners");
+},
+/**
+ * Start an executable using tauri::command.
+ * 
+ * On Windows, uses ShellExecuteW so UAC elevation is handled automatically.
+ * On Linux, launches via the selected Wine/Proton runner.
+ */
+async startExecutable(path: string, runner: LaunchRunner | null) : Promise<Result<null, string>> {
+    try {
+    return { data: await TAURI_INVOKE("start_executable", { path, runner }), status: "ok" };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { error: e  as any, status: "error" };
+}
 },
 async stopGetGamesImages() : Promise<void> {
     await TAURI_INVOKE("stop_get_games_images");
@@ -855,6 +866,8 @@ export type General = { download_dir: string; concurrent_downloads?: number; fol
 export type GlobalStat = { downloadSpeed: number; uploadSpeed: number; numActive: number; numWaiting: number; numStopped: number; numStoppedTotal: number }
 export type InstallationError = { IOError: string } | "AdminModeError"
 export type InstallationInfo = { output_folder: string; download_folder: string; file_list: string[] }
+export type LaunchRunner = { id: string; name: string; runner_type: RunnerType; path: string }
+export type RunnerType = "wine" | "proton"
 export type InstallationSettings = { auto_clean: boolean; auto_install: boolean; two_gb_limit: boolean; directx_install: boolean; microsoftcpp_install: boolean }
 export type Job = { id: string; metadata: JobMetadata; game: Game; job_path: string; source: DownloadSource; gids: string[]; ddl: DdlJob | null; torrent: TorrentJob | null; state: DownloadState; status: AggregatedStatus | null }
 export type JobMetadata = { game_title: string; target_path: string; created_at: string; updated_at: string }

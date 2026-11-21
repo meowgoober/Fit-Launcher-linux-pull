@@ -312,10 +312,21 @@ pub fn open_devtools(app: AppHandle) {
 }
 #[tauri::command]
 #[specta]
-pub fn get_install_queue_status()
--> Result<fit_launcher_ui_automation::controller_manager::QueueStatus, CustomError> {
-    fit_launcher_ui_automation::controller_manager::get_install_queue_status()
-        .map_err(|e| CustomError { message: e })
+pub fn get_install_queue_status(
+) -> Result<fit_launcher_ui_automation::mighty_commands::QueueStatus, CustomError> {
+    #[cfg(windows)]
+    {
+        fit_launcher_ui_automation::controller_manager::get_install_queue_status()
+            .map_err(|e| CustomError { message: e })
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(fit_launcher_ui_automation::mighty_commands::QueueStatus {
+            queue: Vec::new(),
+            active: None,
+        })
+    }
 }
 
 #[tauri::command]

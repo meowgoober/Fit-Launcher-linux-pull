@@ -1,81 +1,106 @@
-name: 'publish'
+name: "publish"
 
 on:
-    workflow_dispatch:  # Manual trigger only
+  workflow_dispatch: # Manual trigger only
 #   push:
 #     branches:
 #       - master
 #     paths:
-#       - 'src/**'
-#       - 'src-tauri/**'
-      
+#       - "src/**"
+#       - "src-tauri/**"
+
 jobs:
   publish-tauri:
     permissions:
       contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+          - platform: ubuntu-22.04
 
-    runs-on: windows-latest
+    runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: setup node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: 'npm' 
+          cache: "npm"
 
-      - name: install Rust stable
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@1.91.1
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: "./src-tauri -> target"
 
-      - name: Get latest aria2 tag
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            aria2
+
+      - name: Get latest Windows aria2 tag
+        if: matrix.platform == 'windows-latest'
         id: get-tag
         shell: bash
         run: |
-          TAG=$( curl -H "Authorization: Bearer "${{ secrets.GITHUB_TOKEN }} -s \
-              https://api.github.com/repos/mokurin000/aria2c-windows-hide-console/releases/latest |
-              jq -r '.tag_name'
-          )
+          TAG=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s \
+            https://api.github.com/repos/mokurin000/aria2c-windows-hide-console/releases/latest | jq -r '.tag_name')
           TAG_VER=$(echo "$TAG" | sed 's/release-//')
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "tag_ver=${TAG_VER}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "tag_ver=${TAG_VER}" >> "$GITHUB_OUTPUT"
 
-      - name: Download binaries
+      - name: Download Windows aria2c
+        if: matrix.platform == 'windows-latest'
         shell: bash
         run: |
           curl -L -o 64bit.zip "https://github.com/mokurin000/aria2c-windows-hide-console/releases/download/${{ steps.get-tag.outputs.tag }}/aria2-${{ steps.get-tag.outputs.tag_ver }}-win-64bit-build1.zip"
 
-      - name: Extract aria2c.exe
+      - name: Extract Windows aria2c sidecar
+        if: matrix.platform == 'windows-latest'
         shell: powershell
         run: |
           Expand-Archive -Path 64bit.zip -DestinationPath .
-          Move-Item aria2-${{ steps.get-tag.outputs.tag_ver }}-win-64bit-build1/aria2c.exe ./src-tauri/binaries/aria2c-x86_64-pc-windows-msvc.exe
+          Move-Item "aria2-${{ steps.get-tag.outputs.tag_ver }}-win-64bit-build1/aria2c.exe" ./src-tauri/binaries/aria2c-x86_64-pc-windows-msvc.exe
           Remove-Item 64bit.zip
 
-      - name: Build automation binary
+      - name: Build Windows automation sidecar
+        if: matrix.platform == 'windows-latest'
         shell: powershell
         run: |
           cd src-tauri
           cargo build --release -p fit-launcher-automation
           Move-Item -Force "target/release/FitLauncherService.exe" "binaries/FitLauncherService-x86_64-pc-windows-msvc.exe"
 
-      - name: install frontend dependencies
-        run: npm install # change this to npm or pnpm depending on which one you use.
+      - name: Install frontend dependencies
+        run: npm ci
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY : ${{  secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD : ${{secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD}}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: app-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          tagName: app-v__VERSION__
+          releaseName: "App v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
-          args: ''
+          args: ""

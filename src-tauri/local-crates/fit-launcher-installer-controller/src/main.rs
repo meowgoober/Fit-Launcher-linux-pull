@@ -1,54 +1,37 @@
 //! FitLauncher Installer Controller
 //!
-//! A short-lived elevated process that handles privileged installer operations:
-//! - Launching setup.exe with admin rights
-//! - Installing SetWinEventHook for progress monitoring
-//! - Running UI automation (clicking dialogs, setting paths)
-//! - Reporting progress back to the main GUI via IPC
-//!
-//! # Architecture
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────────────┐
-//! │  Tauri GUI (non-elevated)                                       │
-//! │  ┌─────────────────────────────────────────────────────────┐    │
-//! │  │  IpcClient::connect() ──► spawn installer-controller.exe│    │
-//! │  │  IpcClient::start_install(...)                          │    │
-//! │  │  loop { IpcClient::recv() => emit tauri events }        │    │
-//! │  └─────────────────────────────────────────────────────────┘    │
-//! └──────────────────────────────────────────────────────────────────┘
-//!                              ▲
-//!                              │ Named Pipe IPC
-//!                              ▼
-//! ┌──────────────────────────────────────────────────────────────────┐
-//! │  Installer Controller (elevated, this process)                   │
-//! │  ┌─────────────────────────────────────────────────────────┐    │
-//! │  │  IpcServer::run()                                       │    │
-//! │  │  ├─► receive StartInstall command                       │    │
-//! │  │  ├─► spawn setup.exe                                    │    │
-//! │  │  ├─► run UI automation                                  │    │
-//! │  │  ├─► SetWinEventHook for progress                       │    │
-//! │  │  └─► send Progress/Phase/Completed events               │    │
-//! │  └─────────────────────────────────────────────────────────┘    │
-//! └──────────────────────────────────────────────────────────────────┘
-//! ```
+//! Windows-only elevated helper process for privileged installer operations.
+//! On Linux this binary is a no-op stub.
 
+#[cfg(windows)]
 pub mod automation;
+#[cfg(windows)]
 pub mod defender;
+#[cfg(windows)]
 pub mod errors;
+#[cfg(windows)]
 pub mod events;
+#[cfg(windows)]
 pub mod installer;
+#[cfg(windows)]
 pub mod ipc;
+#[cfg(windows)]
 pub mod utils;
 
-use std::env;
-use tracing::{Level, error, info};
-use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::FmtSubscriber;
-
-use crate::ipc::server::IpcServer;
-
+#[cfg(windows)]
 fn main() {
+    use std::env;
+    use tracing::{Level, error, info};
+    use tracing_appender::rolling::{RollingFileAppender, Rotation};
+    use tracing_subscriber::FmtSubscriber;
+
+    use crate::ipc::server::IpcServer;
+
+    fn run_server(pipe_name: &str) -> anyhow::Result<()> {
+        let mut server = IpcServer::new(pipe_name)?;
+        server.run()
+    }
+
     let logs_dir = directories::BaseDirs::new()
         .expect("Could not determine base directories")
         .config_dir()
@@ -76,18 +59,13 @@ fn main() {
 
     info!("Installer Controller starting...");
 
-    // Parse command line arguments
     let args: Vec<String> = env::args().collect();
-
-    // Expected: installer-controller.exe <pipe_name>
     let pipe_name = args.get(1).cloned().unwrap_or_else(|| {
-        // Default pipe name for testing
         r"\\.\pipe\FitLauncherService".to_string()
     });
 
     info!("Using pipe: {}", pipe_name);
 
-    // Run the IPC server
     if let Err(e) = run_server(&pipe_name) {
         error!("Controller failed: {:#}", e);
         std::process::exit(1);
@@ -96,7 +74,7 @@ fn main() {
     info!("Installer Controller shutting down");
 }
 
-fn run_server(pipe_name: &str) -> anyhow::Result<()> {
-    let mut server = IpcServer::new(pipe_name)?;
-    server.run()
+#[cfg(not(windows))]
+fn main() {
+    eprintln!("FitLauncherService (installer controller) is only supported on Windows.");
 }
