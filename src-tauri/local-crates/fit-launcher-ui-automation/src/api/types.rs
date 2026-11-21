@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[cfg(target_os = "windows")]
 use fit_launcher_scraping::db::extract_slug;
 use fit_launcher_scraping::structs::Game;
 use tauri::async_runtime::spawn_blocking;

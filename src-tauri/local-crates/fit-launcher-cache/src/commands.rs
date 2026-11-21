@@ -220,13 +220,16 @@ async fn cache_image_async(
     }
 
     let write_result = async {
-        let mut file = tokio::fs::OpenOptions::new()
-            .share_mode(0)
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&img_path)
-            .await?;
+        let mut opts = tokio::fs::OpenOptions::new();
+        opts.create(true).write(true).truncate(true);
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            opts.share_mode(0);
+        }
+
+        let mut file = opts.open(&img_path).await?;
         file.write_all(&bytes).await?;
         file.flush().await?;
         Ok::<_, std::io::Error>(())

@@ -2,7 +2,10 @@ use directories::BaseDirs;
 use serde::{Deserialize, Serialize};
 use specta::{Type, specta};
 use std::path::PathBuf;
-use tracing::{error, info};
+use tracing::info;
+
+#[cfg(target_os = "windows")]
+use tracing::error;
 
 #[cfg(target_os = "windows")]
 use std::time::Duration;
